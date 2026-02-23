@@ -19,6 +19,7 @@
 </p>
 
 ---
+![Version](https://img.shields.io/badge/version-v1.2.1--mod1-blue)
 [![GitHub Release](https://img.shields.io/github/v/release/laisuk/MingwInstallerMod?display_name=tag&sort=semver)](https://github.com/laisuk/MingwInstallerMod/releases/latest)
 [![Total Downloads](https://img.shields.io/github/downloads/laisuk/MingwInstallerMod/total.svg)](https://github.com/laisuk/MingwInstallerMod/releases)
 [![Latest Downloads](https://img.shields.io/github/downloads/laisuk/MingwInstallerMod/latest/total.svg)](https://github.com/laisuk/MingwInstallerMod/releases/latest)
