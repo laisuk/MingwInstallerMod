@@ -1,6 +1,7 @@
 #ifndef MINGWINSTALLER_PICTURE_HPP
 #define MINGWINSTALLER_PICTURE_HPP
 
+#include <cstddef>
 #include <cstdint>
 
 struct Picture{

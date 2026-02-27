@@ -1,6 +1,7 @@
 #ifndef MINGWINSTALLER_PAGES_HPP
 #define MINGWINSTALLER_PAGES_HPP
 
+#include <cstddef>
 #include <cstdint>
 
 
