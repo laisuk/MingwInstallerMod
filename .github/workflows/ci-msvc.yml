@@ -1,0 +1,93 @@
+name: CI (MSVC, windows-latest)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-msvc:
+    runs-on: windows-latest
+
+    env:
+      BUILD_TYPE: Release
+      # Choose ONE:
+      # - x64-windows-static    => /MT (static CRT)   (small single exe style, but must match project runtime)
+      # - x64-windows-static-md => /MD (dynamic CRT)  (often fewer CRT mismatch headaches)
+      VCPKG_TRIPLET: x64-windows-static
+      VCPKG_WDIR: ${{ github.workspace }}\vcpkg
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # Cache FIRST (so clone/bootstrap can reuse downloaded archives if present)
+      - name: Cache vcpkg artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            vcpkg\downloads
+            vcpkg\buildtrees
+            vcpkg\packages
+            vcpkg\installed
+            C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: vcpkg-${{ runner.os }}-${{ env.VCPKG_TRIPLET }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ env.VCPKG_TRIPLET }}-
+            vcpkg-${{ runner.os }}-
+
+      - name: Clone vcpkg
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "$env:VCPKG_WDIR")) {
+            git clone https://github.com/microsoft/vcpkg.git "$env:VCPKG_WDIR"
+          }
+          cmd /c """$env:VCPKG_WDIR\bootstrap-vcpkg.bat"""
+
+      - name: Install dependencies (vcpkg)
+        shell: pwsh
+        run: |
+          $vcpkgRoot = "$env:VCPKG_WDIR"
+          $vcpkg = "$vcpkgRoot\vcpkg.exe"
+
+          & $vcpkg --vcpkg-root $vcpkgRoot install `
+            "fltk[core,opengl]" `
+            "curl[core,non-http,sspi,ssl]" `
+            --triplet $env:VCPKG_TRIPLET `
+            --host-triplet x64-windows
+
+      - name: Configure (CMake)
+        shell: pwsh
+        run: |
+          $vcpkgRoot = "$env:VCPKG_WDIR"
+          $trip = "$env:VCPKG_TRIPLET"
+
+          $env:VCPKG_ROOT = $vcpkgRoot
+          $env:VCPKG_INSTALLATION_ROOT = $vcpkgRoot
+
+          Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+
+          cmake -S . -B build -G "Ninja" `
+            -DCMAKE_BUILD_TYPE="$env:BUILD_TYPE" `
+            -DCMAKE_TOOLCHAIN_FILE="$vcpkgRoot\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET="$trip"
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cmake --build build --config "$env:BUILD_TYPE" -v
+
+      - name: Upload artifact (exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: MingwInstallerMod-${{ runner.os }}-${{ env.VCPKG_TRIPLET }}
+          path: |
+            build/MingwInstallerMod.exe
+            build/Release/MingwInstallerMod.exe
+          if-no-files-found: error
