@@ -3,15 +3,6 @@ cmake_minimum_required(VERSION 3.23)
 # -----------------------------
 # vcpkg (single owner)
 # -----------------------------
-#set(CMAKE_TOOLCHAIN_FILE "D:/lib/vcpkg/scripts/buildsystems/vcpkg.cmake"
-#        CACHE STRING "" FORCE)
-#
-#set(VCPKG_TARGET_TRIPLET "x64-mingw-static"
-#        CACHE STRING "" FORCE)
-
-# -----------------------------
-# vcpkg (single owner)
-# -----------------------------
 if (NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     if (DEFINED ENV{VCPKG_WDIR})
         set(CMAKE_TOOLCHAIN_FILE
@@ -33,7 +24,6 @@ if (NOT DEFINED VCPKG_TARGET_TRIPLET)
         set(VCPKG_TARGET_TRIPLET "x64-mingw-static" CACHE STRING "")
     endif ()
 endif ()
-
 
 project(MingwInstallerMod LANGUAGES C CXX)
 

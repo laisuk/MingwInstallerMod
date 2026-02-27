@@ -5,20 +5,14 @@
 #ifdef WIN32
 
 #include <codecvt>
-
 #include "windows.h"
-#include "winnls.h"
 #include "shobjidl.h"
 #include "objbase.h"
 #include "objidl.h"
-#include "shlguid.h"
-#include "shobjidl.h"
 #include "shellapi.h"
-#include <Windows.h>
 #include <fstream>
 #include <shlobj.h>
 #include <KnownFolders.h>
-#include <cwchar>
 
 
 /*============================================================================*/
