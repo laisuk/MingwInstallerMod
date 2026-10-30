@@ -365,3 +365,6 @@ FodyWeavers.xsd
 .idea/
 
 .venv/
+
+# Out-of-source CMake presets and local validation
+/build/

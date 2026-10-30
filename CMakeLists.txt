@@ -8,6 +8,10 @@ if (NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         set(CMAKE_TOOLCHAIN_FILE
                 "$ENV{VCPKG_WDIR}/scripts/buildsystems/vcpkg.cmake"
                 CACHE STRING "" FORCE)
+    elseif (DEFINED ENV{VCPKG_ROOT})
+        set(CMAKE_TOOLCHAIN_FILE
+                "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                CACHE FILEPATH "vcpkg toolchain")
     else ()
         set(CMAKE_TOOLCHAIN_FILE
                 "D:/lib/vcpkg/scripts/buildsystems/vcpkg.cmake"
@@ -15,17 +19,39 @@ if (NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     endif ()
 endif ()
 
-# Choose triplet by toolchain
+# Explicit triplets from presets/CLion take precedence. With Ninja, specify
+# the compiler (or CXX) when selecting MinGW; Windows otherwise defaults to cl.
 if (NOT DEFINED VCPKG_TARGET_TRIPLET)
-    if (MSVC)
-        set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "")
-        #        list(APPEND CMAKE_PREFIX_PATH "D:/lib/vcpkg/installed/x64-windows-static")
+    if (CMAKE_GENERATOR MATCHES "MinGW" OR
+            CMAKE_CXX_COMPILER MATCHES "(g[+][+]|c[+][+])" OR
+            "$ENV{CXX}" MATCHES "(g[+][+]|c[+][+])")
+        set(VCPKG_TARGET_TRIPLET "x64-mingw-static" CACHE STRING "vcpkg target triplet")
     else ()
-        set(VCPKG_TARGET_TRIPLET "x64-mingw-static" CACHE STRING "")
+        set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg target triplet")
     endif ()
 endif ()
 
-project(MingwInstallerMod LANGUAGES C CXX)
+project(MingwInstallerMod LANGUAGES C CXX RC)
+
+if (NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "MingwInstallerMod requires a Windows x64 toolchain")
+endif ()
+
+# Match the actual CRT linkage of the supported vcpkg triplets. Static
+# libraries can use either CRT: x64-windows-static-md deliberately uses /MD.
+if (MSVC)
+    if (VCPKG_TARGET_TRIPLET STREQUAL "x64-windows-static")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        set(FLTK_MSVC_RUNTIME_DLL OFF CACHE BOOL "Match vcpkg CRT" FORCE)
+    elseif (VCPKG_TARGET_TRIPLET STREQUAL "x64-windows-static-md")
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+        set(FLTK_MSVC_RUNTIME_DLL ON CACHE BOOL "Match vcpkg CRT" FORCE)
+    else ()
+        message(FATAL_ERROR "MSVC requires x64-windows-static or x64-windows-static-md")
+    endif ()
+elseif (NOT MINGW OR NOT VCPKG_TARGET_TRIPLET STREQUAL "x64-mingw-static")
+    message(FATAL_ERROR "MinGW requires x64-mingw-static; use a separate build directory for each compiler")
+endif ()
 
 # -----------------------------
 # Language / standard
@@ -88,18 +114,44 @@ add_executable(${PROJECT_NAME}
 # -----------------------------
 # Dependencies
 # -----------------------------
-find_package(FLTK CONFIG REQUIRED)
+# Build the same FLTK release used by the newer MingwDownloader.
+# PNG decoding (Manager::logo) requires Images. No OpenGL or Forms APIs
+# are used. Disabling GL also prevents its vcpkg GLU include directory
+# from shadowing the fetched FLTK headers (FLTK 1.4.5 include ordering).
+include(FetchContent)
+set(FLTK_BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_FLUID OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_FLTK_OPTIONS OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_GL OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_FORMS OFF CACHE BOOL "" FORCE)
+
+# Keep image codecs local to FLTK, as in the working MinGW configuration.
+# Their include paths cannot introduce another installation's FL/ headers.
+set(FLTK_USE_SYSTEM_LIBJPEG OFF CACHE BOOL "" FORCE)
+set(FLTK_USE_SYSTEM_LIBPNG OFF CACHE BOOL "" FORCE)
+set(FLTK_USE_SYSTEM_ZLIB OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(fltk
+        GIT_REPOSITORY https://github.com/fltk/fltk.git
+        GIT_TAG release-1.4.5
+        GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(fltk)
+
+# CURL continues to come from the existing vcpkg installation.
 find_package(CURL CONFIG REQUIRED)
 
-# FLTK: link by library names (vcpkg MinGW static installs libfltk*.a)
+# Use only fetched targets; Images propagates the matching core FLTK target.
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        fltk_images
-        fltk_forms
-        fltk_gl
-        fltk
-        opengl32
+        fltk::images
         CURL::libcurl
 )
+
+if (WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ole32 shell32 uuid)
+endif ()
 
 # -----------------------------
 # Windows (MinGW) flags / system libs
@@ -135,9 +187,6 @@ if (WIN32)
         # GUI subsystem (no console)
         target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
 
-        # Optional: if you want static MSVC runtime (/MT) in Release
-        # (Only do this if you really want "single exe" style for MSVC too)
-        # set_property(TARGET MingwDownloader PROPERTY
-        #     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+        # CRT selection above applies to the application and fetched libraries.
     endif ()
 endif ()

@@ -1,0 +1,51 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "release-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
+    },
+    {
+      "name": "release-mingw",
+      "inherits": "release-base",
+      "displayName": "MinGW-w64 x64 Release",
+      "binaryDir": "${sourceDir}/build/release-mingw",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-static"
+      }
+    },
+    {
+      "name": "release-msvc",
+      "inherits": "release-base",
+      "displayName": "MSVC x64 Release",
+      "binaryDir": "${sourceDir}/build/release-msvc",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "release-mingw",
+      "configurePreset": "release-mingw"
+    },
+    {
+      "name": "release-msvc",
+      "configurePreset": "release-msvc"
+    }
+  ]
+}
