@@ -57,7 +57,7 @@ jobs:
           $vcpkg = "$vcpkgRoot\vcpkg.exe"
 
           & $vcpkg --vcpkg-root $vcpkgRoot install `
-            "curl[core,non-http,sspi,ssl]" `
+            "curl[core,sspi,ssl]" `
             --triplet $env:VCPKG_TRIPLET `
             --host-triplet x64-windows
 
