@@ -23,7 +23,7 @@
 [![Total Downloads](https://img.shields.io/github/downloads/laisuk/MingwInstallerMod/total.svg)](https://github.com/laisuk/MingwInstallerMod/releases)
 [![Latest Downloads](https://img.shields.io/github/downloads/laisuk/MingwInstallerMod/latest/total.svg)](https://github.com/laisuk/MingwInstallerMod/releases/latest)
 [![License](https://img.shields.io/github/license/laisuk/MingwInstallerMod.svg)](https://github.com/laisuk/MingwInstallerMod/blob/main/LICENSE)
-[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F72%20Clean-brightgreen)](https://www.virustotal.com/gui/file/bcc06c50a7da7899bc7f7b4baf5d6a8d705c88b9066405f081f6f46b30c1471c)
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F71%20Clean-brightgreen)](https://www.virustotal.com/gui/file/057db24f542e50ee51262d3f5f2a29979e2c8735d7b86969c3cf70911554a15d)
 
 ## About
 
