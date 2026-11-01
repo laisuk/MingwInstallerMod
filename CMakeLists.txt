@@ -1,57 +1,26 @@
 cmake_minimum_required(VERSION 3.23)
 
-# -----------------------------
-# vcpkg (single owner)
-# -----------------------------
-if (NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-    if (DEFINED ENV{VCPKG_WDIR})
-        set(CMAKE_TOOLCHAIN_FILE
-                "$ENV{VCPKG_WDIR}/scripts/buildsystems/vcpkg.cmake"
-                CACHE STRING "" FORCE)
-    elseif (DEFINED ENV{VCPKG_ROOT})
-        set(CMAKE_TOOLCHAIN_FILE
-                "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-                CACHE FILEPATH "vcpkg toolchain")
-    else ()
-        set(CMAKE_TOOLCHAIN_FILE
-                "D:/lib/vcpkg/scripts/buildsystems/vcpkg.cmake"
-                CACHE STRING "" FORCE)
-    endif ()
-endif ()
-
-# Explicit triplets from presets/CLion take precedence. With Ninja, specify
-# the compiler (or CXX) when selecting MinGW; Windows otherwise defaults to cl.
-if (NOT DEFINED VCPKG_TARGET_TRIPLET)
-    if (CMAKE_GENERATOR MATCHES "MinGW" OR
-            CMAKE_CXX_COMPILER MATCHES "(g[+][+]|c[+][+])" OR
-            "$ENV{CXX}" MATCHES "(g[+][+]|c[+][+])")
-        set(VCPKG_TARGET_TRIPLET "x64-mingw-static" CACHE STRING "vcpkg target triplet")
-    else ()
-        set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg target triplet")
-    endif ()
-endif ()
-
 project(MingwInstallerMod LANGUAGES C CXX RC)
 
 if (NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "MingwInstallerMod requires a Windows x64 toolchain")
 endif ()
 
-# Match the actual CRT linkage of the supported vcpkg triplets. Static
-# libraries can use either CRT: x64-windows-static-md deliberately uses /MD.
+# Select the prebuilt curl/zlib SDK after detecting the actual compiler.
 if (MSVC)
-    if (VCPKG_TARGET_TRIPLET STREQUAL "x64-windows-static")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-        set(FLTK_MSVC_RUNTIME_DLL OFF CACHE BOOL "Match vcpkg CRT" FORCE)
-    elseif (VCPKG_TARGET_TRIPLET STREQUAL "x64-windows-static-md")
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-        set(FLTK_MSVC_RUNTIME_DLL ON CACHE BOOL "Match vcpkg CRT" FORCE)
-    else ()
-        message(FATAL_ERROR "MSVC requires x64-windows-static or x64-windows-static-md")
-    endif ()
-elseif (NOT MINGW OR NOT VCPKG_TARGET_TRIPLET STREQUAL "x64-mingw-static")
-    message(FATAL_ERROR "MinGW requires x64-mingw-static; use a separate build directory for each compiler")
+    set(_curl_sdk windows-msvc)
+    set(_curl_triplet x64-windows-static)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(FLTK_MSVC_RUNTIME_DLL OFF CACHE BOOL "Match bundled curl CRT" FORCE)
+elseif (MINGW)
+    set(_curl_sdk windows-mingw)
+    set(_curl_triplet x64-mingw-static)
+else ()
+    message(FATAL_ERROR "The bundled curl libraries require MSVC or MinGW x64")
 endif ()
+set(_curl_prefix "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/${_curl_sdk}/installed/${_curl_triplet}")
+set(CURL_DIR "${_curl_prefix}/share/curl")
+set(ZLIB_ROOT "${_curl_prefix}")
 
 # -----------------------------
 # Language / standard
@@ -140,7 +109,7 @@ FetchContent_Declare(fltk
 
 FetchContent_MakeAvailable(fltk)
 
-# CURL continues to come from the existing vcpkg installation.
+# Use the bundled, relocatable curl package and its transitive zlib dependency.
 find_package(CURL CONFIG REQUIRED)
 
 # Use only fetched targets; Images propagates the matching core FLTK target.

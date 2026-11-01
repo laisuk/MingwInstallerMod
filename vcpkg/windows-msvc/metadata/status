@@ -1,0 +1,57 @@
+Package: zlib
+Version: 1.3.1
+Depends: vcpkg-cmake:x64-windows
+Architecture: x64-windows-static
+Multi-Arch: same
+Abi: 68f91eec90909720fdfa4292e87c2aad7bdc5f99f96fd29745073d2d6aec93a7
+Description: A compression library
+Status: install ok installed
+
+Package: curl
+Version: 8.14.1
+Depends: vcpkg-cmake:x64-windows, vcpkg-cmake-config:x64-windows, zlib
+Architecture: x64-windows-static
+Multi-Arch: same
+Abi: 23080a3bec14e7a0edcc60522fe9c4c99675650d8fb5dc61ce79f9e3a4dec7e8
+Description: A library for transferring data with URLs
+Default-Features: non-http, ssl
+Status: install ok installed
+
+Package: curl
+Feature: non-http
+Architecture: x64-windows-static
+Multi-Arch: same
+Description: Enables protocols beyond HTTP/HTTPS/HTTP2
+Status: install ok installed
+
+Package: curl
+Feature: schannel
+Depends: curl
+Architecture: x64-windows-static
+Multi-Arch: same
+Description: SSL support (Secure Channel)
+Status: install ok installed
+
+Package: curl
+Feature: ssl
+Depends: curl
+Architecture: x64-windows-static
+Multi-Arch: same
+Description: Default SSL backend
+Status: install ok installed
+
+Package: curl
+Feature: sspi
+Architecture: x64-windows-static
+Multi-Arch: same
+Description: SSPI support
+Status: install ok installed
+
+Package: curl
+Feature: tool
+Architecture: x64-windows-static
+Multi-Arch: same
+Description: Builds curl executable
+Status: install ok installed
+
+

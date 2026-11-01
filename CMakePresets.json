@@ -22,8 +22,7 @@
       "binaryDir": "${sourceDir}/build/release-mingw",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "gcc",
-        "CMAKE_CXX_COMPILER": "g++",
-        "VCPKG_TARGET_TRIPLET": "x64-mingw-static"
+        "CMAKE_CXX_COMPILER": "g++"
       }
     },
     {
@@ -33,8 +32,7 @@
       "binaryDir": "${sourceDir}/build/release-msvc",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
-        "CMAKE_CXX_COMPILER": "cl",
-        "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+        "CMAKE_CXX_COMPILER": "cl"
       }
     }
   ],

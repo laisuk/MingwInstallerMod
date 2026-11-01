@@ -1,0 +1,56 @@
+Package: zlib
+Version: 1.3.1
+Depends: vcpkg-cmake:x64-windows
+Architecture: x64-mingw-static
+Multi-Arch: same
+Abi: 4908c1ac27e3565d24ddb9c8565c23dc907764f03da7adaa89644bccd59efd9a
+Description: A compression library
+Status: install ok installed
+
+Package: curl
+Version: 8.14.1
+Depends: vcpkg-cmake:x64-windows, vcpkg-cmake-config:x64-windows, zlib
+Architecture: x64-mingw-static
+Multi-Arch: same
+Abi: cb14c2cc69f32b24f80de3829561c0ce03ab5a1cc8aa805ff793ae68d6a6a323
+Description: A library for transferring data with URLs
+Default-Features: non-http, ssl
+Status: install ok installed
+
+Package: curl
+Feature: non-http
+Architecture: x64-mingw-static
+Multi-Arch: same
+Description: Enables protocols beyond HTTP/HTTPS/HTTP2
+Status: install ok installed
+
+Package: curl
+Feature: schannel
+Depends: curl
+Architecture: x64-mingw-static
+Multi-Arch: same
+Description: SSL support (Secure Channel)
+Status: install ok installed
+
+Package: curl
+Feature: ssl
+Depends: curl
+Architecture: x64-mingw-static
+Multi-Arch: same
+Description: Default SSL backend
+Status: install ok installed
+
+Package: curl
+Feature: sspi
+Architecture: x64-mingw-static
+Multi-Arch: same
+Description: SSPI support
+Status: install ok installed
+
+Package: curl
+Feature: tool
+Architecture: x64-mingw-static
+Multi-Arch: same
+Description: Builds curl executable
+Status: install ok installed
+
