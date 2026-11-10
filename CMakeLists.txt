@@ -159,3 +159,19 @@ if (WIN32)
         # CRT selection above applies to the application and fetched libraries.
     endif ()
 endif ()
+
+include(CTest)
+if (BUILD_TESTING)
+    get_target_property(_installer_sources ${PROJECT_NAME} SOURCES)
+    set(_decoder_sources ${_installer_sources})
+    list(FILTER _decoder_sources INCLUDE REGEX "src/(unpack[.]c|lzma2201/.*[.]c)$")
+    add_executable(install_transaction_test tests/install_transaction_test.cpp ${_decoder_sources})
+    target_include_directories(install_transaction_test PRIVATE src)
+    find_package(Python3 COMPONENTS Interpreter)
+    find_program(SEVEN_Z_EXECUTABLE 7z PATHS "C:/Program Files/7-Zip")
+    if (Python3_FOUND AND SEVEN_Z_EXECUTABLE)
+        add_test(NAME install_transaction COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_install_tests.py"
+            "${SEVEN_Z_EXECUTABLE}" "$<TARGET_FILE:install_transaction_test>")
+    endif ()
+endif ()

@@ -206,7 +206,13 @@ static WRes MyCreateDir(const UInt16 *name)
 {
 #ifdef USE_WINDOWS_FILE
 
-    return CreateDirectoryW((LPCWSTR)name, NULL) ? 0 : GetLastError();
+    if (CreateDirectoryW((LPCWSTR)name, NULL)) return 0;
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        DWORD attributes = GetFileAttributesW((LPCWSTR)name);
+        if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) &&
+            !(attributes & FILE_ATTRIBUTE_REPARSE_POINT)) return 0;
+    }
+    return GetLastError() ? GetLastError() : ERROR_DIRECTORY;
 
 #else
 
@@ -653,8 +659,7 @@ int MY_CDECL seven_z(int(* force_update)(size_t, size_t), int numargs, char *arg
             for (i = 0; i < db.NumFiles; i++)//this
             {
                 int force = force_update(i, db.NumFiles);
-                if(force)
-                    return force;
+                if (force) { res = SZ_ERROR_FAIL; break; }
                 size_t offset = 0;
                 size_t outSizeProcessed = 0;
                 // const CSzFileItem *f = db.Files + i;
@@ -678,6 +683,21 @@ int MY_CDECL seven_z(int(* force_update)(size_t, size_t), int numargs, char *arg
                 }
 
                 SzArEx_GetFileNameUtf16(&db, i, temp);
+                {
+                    size_t k, component = 0;
+                    for (k = 0; ; ++k) {
+                        UInt16 c = temp[k];
+                        if (c == ':' || c == '\\' || (c && c < 32)) { res = SZ_ERROR_FAIL; break; }
+                        if (c == '/' || c == 0) {
+                            size_t n = k - component;
+                            if (!n || temp[k - 1] == '.' || temp[k - 1] == ' ') { res = SZ_ERROR_FAIL; break; }
+                            component = k + 1;
+                        }
+                        if (!c) break;
+                    }
+                    if (res != SZ_OK) break;
+                }
+
                 /*
                 if (SzArEx_GetFullNameUtf16_Back(&db, i, temp + len) != temp)
                 {
@@ -754,16 +774,19 @@ int MY_CDECL seven_z(int(* force_update)(size_t, size_t), int numargs, char *arg
                             if (fullPaths)
                             {
                                 name[j] = 0;
-                                MyCreateDir(name);
+                                WRes dirRes = MyCreateDir(name);
+                                if (dirRes) { PrintError_WRes("cannot create directory", dirRes); res = SZ_ERROR_FAIL; break; }
                                 name[j] = CHAR_PATH_SEPARATOR;
                             }
                             else
                                 destPath = name + j + 1;
                         }
 
+                    if (res != SZ_OK) break;
                     if (isDir)
                     {
-                        MyCreateDir(destPath);
+                        WRes dirRes = MyCreateDir(destPath);
+                        if (dirRes) { PrintError_WRes("cannot create directory", dirRes); res = SZ_ERROR_FAIL; break; }
                         PrintLF();
                         continue;
                     }
@@ -784,6 +807,7 @@ int MY_CDECL seven_z(int(* force_update)(size_t, size_t), int numargs, char *arg
                         WRes wres = File_Write(&outFile, outBuffer + offset, &processedSize);
                         if (wres != 0 || processedSize != outSizeProcessed)
                         {
+                            File_Close(&outFile);
                             PrintError_WRes("cannot write output file", wres);
                             res = SZ_ERROR_FAIL;
                             break;

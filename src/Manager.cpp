@@ -1,4 +1,5 @@
 #include "Manager.hpp"
+#include "InstallTransaction.hpp"
 
 #include <filesystem>
 #include <algorithm>
@@ -228,26 +229,23 @@ void Manager::unpack() {
 
     const char *args[4]{"seven_z", "x", file.c_str()};
 
-    std::filesystem::current_path(installDir);
-
-    const std::filesystem::path mingw(std::filesystem::current_path() /
-                                      folderNames[downloadCandidate.architecture == Arcs::x86_64].data());
-
-    if (exists(mingw))
-        directory_delete(folderNames[downloadCandidate.architecture == Arcs::x86_64].data());
-
-    const auto res = seven_z(force_update, 3, args);
-
-    printf("\nFile %s\n", file.c_str());
-    printf("Dir %s\n", installDir.c_str());
-    printf("Cur %s\n", std::filesystem::current_path().string().c_str());
-
-    if (res) {
-        if (exists(mingw))
-            directory_delete(folderNames[downloadCandidate.architecture == Arcs::x86_64].data());
-        if (res == 1488)
-            showError("try set another folder or run installer again, access denied(maybe)");
-        showError("Unpack error, try run installer again");
+    try {
+        const auto warning = installation::install(installDir,
+            std::string(folderNames[downloadCandidate.architecture == Arcs::x86_64]),
+            [&](const std::filesystem::path &staging) {
+                const auto previous = std::filesystem::current_path();
+                std::filesystem::current_path(staging);
+                int result;
+                try { result = seven_z(force_update, 3, args); }
+                catch (...) { std::filesystem::current_path(previous); throw; }
+                std::filesystem::current_path(previous);
+                return result == 0;
+            }, [&]() { return extractCancel() != 0; });
+        if (!warning.empty()) showError(warning.c_str());
+    } catch (const std::exception &e) {
+        status = Status::Downloaded;
+        page7_set(Page7state::extract);
+        showError(e.what());
         return;
     }
 
@@ -391,15 +389,15 @@ void Manager::extractEnd() {
         status = Status::Downloaded;
     } else if (status == Status::Done) {
         page7_set(Page7state::done);
-        shortcut(installDir + createBat(),
-                 installDir + createIcon(),
-                 (downloadCandidate.architecture == Arcs::i686 ? "MinGW-W64-32bit" : "MinGW-W64-64bit"),
-                 0);
-        if (desktopShortcut)
-            shortcut(installDir + createBat(),
-                     installDir + createIcon(),
-                     (downloadCandidate.architecture == Arcs::i686 ? "MinGW-W64-32bit" : "MinGW-W64-64bit"),
-                     1);
+        try {
+            const auto launcher = (std::filesystem::path(installDir) / createBat()).string();
+            const auto icon = (std::filesystem::path(installDir) / createIcon()).string();
+            const auto name = downloadCandidate.architecture == Arcs::i686 ? "MinGW-W64-32bit" : "MinGW-W64-64bit";
+            shortcut(launcher, icon, name, 0);
+            if (desktopShortcut) shortcut(launcher, icon, name, 1);
+        } catch (const std::exception &e) {
+            showError(e.what());
+        }
     } else {
         showError("extractEnd: invalid status");
         throw std::runtime_error("extractEnd: invalid status");
@@ -477,9 +475,11 @@ Fl_RGB_Image *Manager::logo() {
 std::string Manager::createIcon() const {
     std::string file_name = folderNames[downloadCandidate.architecture == Arcs::x86_64].data();
     file_name += "/icon.ico";
-    FILE *file = fopen(file_name.c_str(), "wb");
-    fwrite(getIcon().pointer, 1, getIcon().size, file);
-    fclose(file);
+    FILE *file = fopen((std::filesystem::path(installDir) / file_name).string().c_str(), "wb");
+    if (!file) throw std::runtime_error("Cannot create compiler icon");
+    const bool written = fwrite(getIcon().pointer, 1, getIcon().size, file) == getIcon().size;
+    const int closed = fclose(file);
+    if (!written || closed) throw std::runtime_error("Cannot write compiler icon; shortcuts were not created");
     return file_name;
 }
 
@@ -500,20 +500,22 @@ std::string Manager::createBat() const {
             folderNames[downloadCandidate.architecture == Arcs::x86_64].data();
     file_name += "/mingw.bat";
 
-    FILE *file = fopen(file_name.c_str(), "wb");
+    FILE *file = fopen((std::filesystem::path(installDir) / file_name).string().c_str(), "wb");
+
+    if (!file) throw std::runtime_error("Cannot create compiler launcher");
 
     const std::string binPath =
-            manager.installDir +
-            folderNames[downloadCandidate.architecture == Arcs::x86_64].data() +
-            "/bin";
+            (std::filesystem::path(installDir) /
+             folderNames[downloadCandidate.architecture == Arcs::x86_64].data() / "bin").string();
 
     const std::string bat =
             "@echo off\r\n"
             "set \"PATH=" + binPath + ";%PATH%\"\r\n"
             "%windir%\\system32\\cmd.exe\r\n";
 
-    fwrite(bat.c_str(), 1, bat.size(), file);
-    fclose(file);
+    const bool written = fwrite(bat.c_str(), 1, bat.size(), file) == bat.size();
+    const int closed = fclose(file);
+    if (!written || closed) throw std::runtime_error("Cannot write compiler launcher; shortcuts were not created");
 
     return file_name;
 }

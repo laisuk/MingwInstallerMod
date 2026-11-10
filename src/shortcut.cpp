@@ -124,7 +124,8 @@ std::size_t directory_delete(const std::string &pathname) {
     file.pFrom = p.c_str();
     file.fFlags = FOF_NO_UI | FOF_NOCONFIRMATION;
 
-    return static_cast<std::size_t>(SHFileOperationA(&file));
+    const int result = SHFileOperationA(&file);
+    return static_cast<std::size_t>(result ? result : (file.fAnyOperationsAborted ? ERROR_CANCELLED : 0));
 }
 
 void showError(const char *error) {
