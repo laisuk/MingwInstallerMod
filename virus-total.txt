@@ -1,2 +1,5 @@
-MingwInstallerMod 1.2.1 Nod2 MinGW
+MingwInstallerMod 1.2.1 Mod2 MinGW
 https://www.virustotal.com/gui/file/f1e5bbbf2c3728442a53aa3139b2888a281793b3de234408121f676b4aabe8f1/detection
+
+MingwInstallerMod 1.2.1 Mod3 MinGW
+https://www.virustotal.com/gui/file/f985624b1411745fecbbc4cbf9c87bec9860de41e213035d632d1db3db63f67b/detection
